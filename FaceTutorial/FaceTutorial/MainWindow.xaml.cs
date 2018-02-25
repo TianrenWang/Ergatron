@@ -31,13 +31,58 @@ namespace FaceTutorial
 		Face[] faces;                   // The list of detected faces.
 		String[] faceDescriptions;      // The list of descriptions for the detected faces.
 		double resizeFactor;            // The resize factor for the displayed image.
+        public MainWindow()
+        {
+            InitializeComponent();
+            // Uploads the image file and calls Detect Faces.
+        }
         int max_index = -1;
-		public MainWindow()
-		{
-			InitializeComponent();
-			// Uploads the image file and calls Detect Faces.
-		}
+        const double W1 = 1, W2 = 1, W3 = 0.1; //weights for the ratios and for frustration
+        const double THRESHOLD = 0.2;
+        double average = 0; //average is going to determine whether or not to go to sleep
+        Queue<double> ratio_queue = new Queue<double>(20); //stores the values for each frame
+        Queue<double> frustration_queue = new Queue<double>(20); //stores frustration values
+        private void Iniitalize_Queues()
+        {
+            for(int i = 0; i < 20; i++)
+            {
+                ratio_queue.Clear();
+                ratio_queue.Enqueue(0);
+                frustration_queue.Clear();
+                frustration_queue.Enqueue(0);
+            }
+        }
+		private void input_frame (Face face)
+        {
+            double ratio_sum = W1*Eye_openning_ratio(face) + W2*yawn_ratio(face);
+            average -= ratio_queue.Dequeue() / 20.0;
+            average += ratio_sum;
+            average += frustration_queue.Dequeue() / 20.0;
+            average -= frustration(face);
+            ratio_queue.Enqueue(ratio_sum);
+            frustration_queue.Enqueue(frustration(face));
 
+        }
+        private bool too_close (Face face)
+        {
+            if (faces.Length() <= 0)
+                return true;
+            return false;
+        }
+
+        private double frustration (Face face)
+        {
+            double anger = 0, fear = 0;
+            anger = face.FaceAttributes.Emotion.Anger;
+            fear = face.FaceAttributes.Emotion.Fear;
+            return (anger + fear)*W3;
+        }
+        private bool Sleep (face)
+        {
+            if (average <= THRESHOLD)
+                return true;
+            return false;
+        }
 		// Displays the image and calls Detect Faces.
 
 		private async void BrowseButton_Click(object sender, RoutedEventArgs e)
@@ -58,6 +103,7 @@ namespace FaceTutorial
 			string filePath = openDlg.FileName;
 
 			Uri fileUri = new Uri(filePath);
+            //MessageBox.Show(filePath);
 			BitmapImage bitmapSource = new BitmapImage();
 
 			bitmapSource.BeginInit();
