@@ -12,6 +12,8 @@ using System.Windows.Media.Imaging;
 using Microsoft.ProjectOxford.Common.Contract;
 using Microsoft.ProjectOxford.Face;
 using Microsoft.ProjectOxford.Face.Contract;
+using Emgu.Util;
+using Emgu.CV;
 
 namespace FaceTutorial
 {
@@ -32,43 +34,79 @@ namespace FaceTutorial
 
 		Face[] faces;                   // The list of detected faces.
 		String[] faceDescriptions;      // The list of descriptions for the detected faces.
-		double resizeFactor;            // The resize factor for the displayed image.
+		double resizeFactor; 
+        string startupPath = Directory.GetParent(Directory.GetCurrentDirectory()).Parent.FullName;
+
+        // The resize factor for the displayed image.
         public MainWindow()
         {
+            Main();
             InitializeComponent();
             // Uploads the image file and calls Detect Faces.
         }
-        int max_index = -1;
+        int max_index = 0; //maybe just change this to 0 for demo
         bool use_frustration = true, use_tiredness = true, too_close = false;
         private void update_uses (bool frustration_on, bool tiredness_on) //user specifices which use to use
         {
             use_frustration = frustration_on; //specified value from user
             use_tiredness = tiredness_on;
         }
+        private void take_pic()
+        {
+            VideoCapture capture = new VideoCapture(); //create a camera capture
+            System.Drawing.Bitmap image = capture.QueryFrame().Bitmap; //take a picture
+            image.Save(startupPath + "\\ApplicationData\\picture.jpg");
+        }
         private async void Main ()
         {
-            Iniitalize_Queues();
+            Initialize_Queues();
             Stopwatch three_second_check = new Stopwatch();
-            while (use_frustration || use_tiredness)
+            //update_uses(frstration_in, tiredness_in); //this needs to be the inputs from the front end side
+            double size = 0;
+            //perhaps call a picture
+            take_pic();
+            Stopwatch debug = new Stopwatch();
+            while ((use_frustration || use_tiredness) && (debug.ElapsedMilliseconds < 10000))
             {
-                //update_uses(frustraion_in, tiredness_in);//this needs to be the inputs from the front end side
-                if (!(use_frustration || use_tiredness))
-                    break;
                 three_second_check.Restart();
                 //take picture and save the picture to a specific path
+                take_pic();
                 //file path needs to change, choose your own path
-                string filePath = "C:\\Users\\johns\\Desktop\\Hack the Valley\\merge_from_ofoct.jpg";
+                //update_uses(frstration_in, tiredness_in); //this needs to be the inputs from the front end side
+                string filePath = startupPath + "\\ApplicationData\\picture.jpg";
                 faces = await UploadAndDetectFaces(filePath);
-                while ((faces == null)&&(three_second_check.ElapsedMilliseconds <= 300))
+                
+                while ((faces == null)&&(three_second_check.ElapsedMilliseconds <= 3000))
                 { }
-                if (three_second_check.ElapsedMilliseconds >= 300)
+                if ((faces == null) && (three_second_check.ElapsedMilliseconds >= 3000))
                 {
                     too_close = true;
-                    //break; //may or may not need to break
+                    MessageBox.Show("No Face Detected");
+                    break; //may or may not need to break
                 }
-                input_frame(faces[max_index]);
-                while (three_second_check.ElapsedMilliseconds >= 300) //waits to make sure three seconds has passed
-                { }
+                if (size <= 20)
+                    size++;
+                double max_area = -1;
+                for (int i = 0; i < faces.Length; ++i) //find the closest face
+                {
+                    Face compare_face = faces[i];
+                    if (compare_face.FaceRectangle.Width * compare_face.FaceRectangle.Height > max_area)
+                    {
+                        max_area = compare_face.FaceRectangle.Width * compare_face.FaceRectangle.Height;
+                        max_index = i;
+                    }
+                }
+                //MessageBox.Show(Eye_openning_ratio(faces[max_index]).ToString());
+                Task.Delay(1000);
+                try
+                {
+                    input_frame(faces[max_index], size);
+                }
+                catch (Exception e)
+                {
+                    //MessageBox.Show("No face detected");
+                    continue;
+                }
                 //could do below with switch case instead
                 if (Sleep(faces[max_index],use_frustration,use_tiredness) == 0)
                 {
@@ -85,55 +123,86 @@ namespace FaceTutorial
                     MessageBox.Show("Time to sleep, you are frustrated"); //this line should somehow tell the they are frustrated
                     break;
                 }
-                MessageBox.Show("User does not need to sleep yet"); //this line should be eliminated
+                //MessageBox.Show("User does not need to sleep yet"); //this line should be eliminated
+                while (three_second_check.ElapsedMilliseconds <= 3000) //waits to make sure three seconds has passed
+                { }
+
             }
         }
-        const double W1 = 1, W2 = 1; //weights for the ratios and for frustration
-        const double TIRED_THRESHOLD = 0.2, FRUSTRATION_THRESHOLD = 1.0;
+        const double W1 = 1.2, W2 = (1.0 / 5.0); //weights for the ratios and for frustration
+        const double TIRED_THRESHOLD = 0.175, FRUSTRATION_THRESHOLD = 1.0; //0.21 jes
         double average_ratio_tiredness = 0, average_frustration = 0; //average is going to determine whether or not to go to sleep
         Queue<double> ratio_queue = new Queue<double>(20); //stores the values for each frame
         Queue<double> frustration_queue = new Queue<double>(20); //stores frustration values
-        private void Iniitalize_Queues()
+        private void Initialize_Queues()
         {
-            for(int i = 0; i < 20; i++)
+            ratio_queue.Clear();
+            frustration_queue.Clear();
+            for (int i = 0; i < 20; i++)
             {
-                ratio_queue.Clear();
                 ratio_queue.Enqueue(0);
-                frustration_queue.Clear();
                 frustration_queue.Enqueue(0);
             }
         }
-		private void input_frame (Face face)
+		private void input_frame (Face face, double size)
         {
-            double ratio_sum = W1*Eye_openning_ratio(face) + W2*yawn_ratio(face);
-            average_ratio_tiredness -= ratio_queue.Dequeue() / 20.0;
-            average_ratio_tiredness += ratio_sum / 20.0;
-            average_frustration += frustration_queue.Dequeue() / 20.0;
-            average_frustration -= frustration(face) / 20.0;
-            ratio_queue.Enqueue(ratio_sum);
-            frustration_queue.Enqueue(frustration(face));
+
+            double ratio_sum = W1*Eye_openning_ratio(face) - W2*yawn_ratio(face);
+            //MessageBox.Show("Eye_openning_ratio: " + Eye_openning_ratio(face).ToString());
+            //MessageBox.Show("\nYawn_Ratio: " + yawn_ratio(face).ToString());
+            //MessageBox.Show("\nYawn_Ratio with multiplier: " + (W2 * yawn_ratio(face)).ToString());
+            double current_sum_tiredness = 0, current_sum_frustration = 0;
+            if (size != 21)
+            {
+                current_sum_tiredness = average_ratio_tiredness * (size - 1);
+                average_ratio_tiredness = (current_sum_tiredness - ratio_queue.Dequeue() + ratio_sum) / size;
+                //current_sum_frustration = average_frustration * (size - 1);
+                //average_frustration = (current_sum_frustration - frustration_queue.Dequeue() + frustration(face)) / size;
+
+                //average_frustration += (frustration_queue.Dequeue() / size);
+                //average_frustration -= (frustration(face) / size);
+                ratio_queue.Enqueue(ratio_sum);
+                //frustration_queue.Enqueue(frustration(face));
+            }
+            else
+            {
+                current_sum_tiredness = average_ratio_tiredness * 20.0;
+                average_ratio_tiredness = (current_sum_tiredness - ratio_queue.Dequeue() + ratio_sum) / 20.0;
+                //current_sum_frustration = average_frustration * 20.0;
+                //average_frustration = (current_sum_frustration - frustration_queue.Dequeue() + frustration(face)) / 20.0;
+
+                //average_frustration += (frustration_queue.Dequeue() / 20.0);
+                //average_frustration -= (frustration(face) / 20.0);
+                ratio_queue.Enqueue(ratio_sum);
+                //frustration_queue.Enqueue(frustration(face));
+            }
+            
 
         }
 
-        private double frustration (Face face)
+        private bool frustration (Face face)
         {
             double anger = 0, fear = 0;
-            anger = face.FaceAttributes.Emotion.Anger;
-            fear = face.FaceAttributes.Emotion.Fear;
-            return (anger + fear);
+            anger = face.FaceAttributes.Emotion.Anger*100;
+            fear = face.FaceAttributes.Emotion.Fear*100;
+            if (anger >= 10 || fear >= 10)
+                return true;
+            return false;
         }
         private int Sleep (Face face, bool use_frustration, bool use_tiredness)
         { //-1 means no need to sleep, 0 means user is tired and frustrated
           // 1 means user is tired, 2 means user is frustrated
+          //MessageBox.Show(average_ratio_tiredness.ToString());
             if (average_ratio_tiredness <= TIRED_THRESHOLD && use_tiredness)
             {
-                if (average_frustration >= FRUSTRATION_THRESHOLD && use_frustration)
+                //if (average_frustration >= FRUSTRATION_THRESHOLD && use_frustration)
+                if (frustration(face) && use_frustration)
                 {
                     return 0; //means user is both
                 }
                 return 1; // means user is just tired
             }
-            if (average_frustration >= FRUSTRATION_THRESHOLD && use_frustration)
+            if (frustration(face) && use_frustration)
                 return 2; // means user is just frustrated
             return -1; //means user is all good
         }
@@ -261,14 +330,14 @@ namespace FaceTutorial
         {
             // The list of Face attributes to return.
             IEnumerable<FaceAttributeType> faceAttributes =
-                new FaceAttributeType[] { FaceAttributeType.Gender, FaceAttributeType.Age, FaceAttributeType.Smile, FaceAttributeType.Emotion, FaceAttributeType.Glasses, FaceAttributeType.Hair };
+                new FaceAttributeType[] { FaceAttributeType.Smile, FaceAttributeType.Emotion};
 
             // Call the Face API.
             try
             {
                 using (Stream imageFileStream = File.OpenRead(imageFilePath))
                 {
-                    Face[] faces = await faceServiceClient.DetectAsync(imageFileStream, returnFaceId: true, returnFaceLandmarks: true, returnFaceAttributes: faceAttributes);
+                    Face[] faces = await faceServiceClient.DetectAsync(imageFileStream, returnFaceId: false, returnFaceLandmarks: true, returnFaceAttributes: faceAttributes);
                     return faces;
                 }
             }
