@@ -36,16 +36,57 @@ namespace FaceTutorial
         String[] faceDescriptions;      // The list of descriptions for the detected faces.
         double resizeFactor;
         string startupPath = Directory.GetParent(Directory.GetCurrentDirectory()).Parent.FullName;
-
+        const int QUEUE_CAPACITY = 4;
         // The resize factor for the displayed image.
+        
         public MainWindow()
         {
-            Main();
+
             InitializeComponent();
+    
+            List<string> data = new List<string>();
+            data.Add("15 minutes");
+            data.Add("30 minutes");
+            data.Add("1 hour");
+            data.Add("2 hours");
+
+            timer.ItemsSource = data;
+            timer.SelectedIndex = 0;
+
+            // Testing Notification Window
+            
             // Uploads the image file and calls Detect Faces.
+            Main();
         }
+
+
+        private void btnCalibrate_Click(object sender, RoutedEventArgs e)
+        {
+            Window1 w = new Window1();
+            w.Show();
+        }
+
+        private void cb_CheckedChanged(object sender, RoutedEventArgs e)
+        {
+            if (cbTired.IsChecked == true && cbFrustrated.IsChecked == true)
+            {
+                update_uses(true, true);
+                //Main();
+            }
+            else if (cbFrustrated.IsChecked.Value == true)
+                update_uses(true, false);
+            else if (cbTired.IsChecked.Value == true)
+                update_uses(false, true);
+            else
+                update_uses(false, false);
+            //faces = null;
+            Main();
+        }
+
+
+
         int max_index = 0; //maybe just change this to 0 for demo
-        bool use_frustration = true, use_tiredness = true, too_close = false;
+        bool use_frustration = false, use_tiredness = false, too_close = false;
         private void update_uses(bool frustration_on, bool tiredness_on) //user specifices which use to use
         {
             use_frustration = frustration_on; //specified value from user
@@ -65,8 +106,7 @@ namespace FaceTutorial
             double size = 0;
             //perhaps call a picture
             take_pic();
-            Stopwatch debug = new Stopwatch();
-            while ((use_frustration || use_tiredness) && (debug.ElapsedMilliseconds < 10000))
+            while ((use_frustration || use_tiredness))
             {
                 three_second_check.Restart();
                 //take picture and save the picture to a specific path
@@ -84,7 +124,7 @@ namespace FaceTutorial
                     MessageBox.Show("No Face Detected");
                     break; //may or may not need to break
                 }
-                if (size <= 20)
+                if (size <= QUEUE_CAPACITY)
                     size++;
                 double max_area = -1;
                 for (int i = 0; i < faces.Length; ++i) //find the closest face
@@ -97,7 +137,7 @@ namespace FaceTutorial
                     }
                 }
                 //MessageBox.Show(Eye_openning_ratio(faces[max_index]).ToString());
-                Task.Delay(1000);
+                await Task.Delay(1000);
                 try
                 {
                     input_frame(faces[max_index], size);
@@ -108,21 +148,39 @@ namespace FaceTutorial
                     continue;
                 }
                 //could do below with switch case instead
-                if (Sleep(faces[max_index], use_frustration, use_tiredness) == 0)
-                {
-                    MessageBox.Show("Time to sleep, you are both tired and frustrated"); //this line should somehow tell the user to sleep (they are both)
-                    break;
+
+
+
+                //get result
+                int result = Sleep(faces[max_index], use_frustration, use_tiredness);
+                if(result == 0 || result == 1 || result == 2) { 
+                    Notification n;
+                    n = new Notification(result);
+                    n.Top = 700;
+                    n.Left = 900;
+                    n.Show();
+                    await Task.Delay(6000);
+                    n.Close();
                 }
-                if (Sleep(faces[max_index], use_frustration, use_tiredness) == 1)
-                {
-                    MessageBox.Show("Time to sleep, you are tired"); //this line should somehow tell the user they are just tired
-                    break;
-                }
-                if (Sleep(faces[max_index], use_frustration, use_tiredness) == 2)
-                {
-                    MessageBox.Show("Time to sleep, you are frustrated"); //this line should somehow tell the they are frustrated
-                    break;
-                }
+               
+
+              
+                //if (Sleep(faces[max_index], use_frustration, use_tiredness) == 0)
+                //{
+
+                //    //MessageBox.Show("Time to sleep, you are both tired and frustrated"); //this line should somehow tell the user to sleep (they are both)
+                //    break;
+                //}
+                //if (Sleep(faces[max_index], use_frustration, use_tiredness) == 1)
+                //{
+                //    MessageBox.Show("Time to sleep, you are tired"); //this line should somehow tell the user they are just tired
+                //    break;
+                //}
+                //if (Sleep(faces[max_index], use_frustration, use_tiredness) == 2)
+                //{
+                //    MessageBox.Show("Time to sleep, you are frustrated"); //this line should somehow tell the they are frustrated
+                //    break;
+                //}
                 //MessageBox.Show("User does not need to sleep yet"); //this line should be eliminated
                 while (three_second_check.ElapsedMilliseconds <= 3000) //waits to make sure three seconds has passed
                 { }
@@ -132,13 +190,13 @@ namespace FaceTutorial
         const double W1 = 1.2, W2 = (1.0 / 5.0); //weights for the ratios and for frustration
         const double TIRED_THRESHOLD = 0.175, FRUSTRATION_THRESHOLD = 1.0; //0.21 jes
         double average_ratio_tiredness = 0, average_frustration = 0; //average is going to determine whether or not to go to sleep
-        Queue<double> ratio_queue = new Queue<double>(20); //stores the values for each frame
-        Queue<double> frustration_queue = new Queue<double>(20); //stores frustration values
+        Queue<double> ratio_queue = new Queue<double>(QUEUE_CAPACITY); //stores the values for each frame
+        Queue<double> frustration_queue = new Queue<double>(QUEUE_CAPACITY); //stores frustration values
         private void Initialize_Queues()
         {
             ratio_queue.Clear();
             frustration_queue.Clear();
-            for (int i = 0; i < 20; i++)
+            for (int i = 0; i < QUEUE_CAPACITY; i++)
             {
                 ratio_queue.Enqueue(0);
                 frustration_queue.Enqueue(0);
@@ -152,7 +210,7 @@ namespace FaceTutorial
             //MessageBox.Show("\nYawn_Ratio: " + yawn_ratio(face).ToString());
             //MessageBox.Show("\nYawn_Ratio with multiplier: " + (W2 * yawn_ratio(face)).ToString());
             double current_sum_tiredness = 0, current_sum_frustration = 0;
-            if (size != 21)
+            if (size != QUEUE_CAPACITY + 1)
             {
                 current_sum_tiredness = average_ratio_tiredness * (size - 1);
                 average_ratio_tiredness = (current_sum_tiredness - ratio_queue.Dequeue() + ratio_sum) / size;
@@ -166,8 +224,8 @@ namespace FaceTutorial
             }
             else
             {
-                current_sum_tiredness = average_ratio_tiredness * 20.0;
-                average_ratio_tiredness = (current_sum_tiredness - ratio_queue.Dequeue() + ratio_sum) / 20.0;
+                current_sum_tiredness = average_ratio_tiredness * QUEUE_CAPACITY;
+                average_ratio_tiredness = (current_sum_tiredness - ratio_queue.Dequeue() + ratio_sum) / QUEUE_CAPACITY;
                 //current_sum_frustration = average_frustration * 20.0;
                 //average_frustration = (current_sum_frustration - frustration_queue.Dequeue() + frustration(face)) / 20.0;
 
@@ -208,122 +266,122 @@ namespace FaceTutorial
         }
         // Displays the image and calls Detect Faces.
 
-        private async void BrowseButton_Click(object sender, RoutedEventArgs e)
-        {
-            // Get the image file to scan from the user.
-            var openDlg = new Microsoft.Win32.OpenFileDialog();
+        //private async void BrowseButton_Click(object sender, RoutedEventArgs e)
+        //{
+        //    // Get the image file to scan from the user.
+        //    var openDlg = new Microsoft.Win32.OpenFileDialog();
 
-            openDlg.Filter = "JPEG Image(*.jpg)|*.jpg";
-            bool? result = openDlg.ShowDialog(this);
+        //    openDlg.Filter = "JPEG Image(*.jpg)|*.jpg";
+        //    bool? result = openDlg.ShowDialog(this);
 
-            // Return if canceled.
-            if (!(bool)result)
-            {
-                return;
-            }
+        //    // Return if canceled.
+        //    if (!(bool)result)
+        //    {
+        //        return;
+        //    }
 
-            // Display the image file.
-            //string filePath = openDlg.FileName;
-            string filePath = "C:\\Users\\johns\\Desktop\\Hack the Valley\\merge_from_ofoct.jpg";
-            Uri fileUri = new Uri(filePath);
-            //MessageBox.Show(filePath);
-            BitmapImage bitmapSource = new BitmapImage();
+        //    // Display the image file.
+        //    //string filePath = openDlg.FileName;
+        //    string filePath = "C:\\Users\\johns\\Desktop\\Hack the Valley\\merge_from_ofoct.jpg";
+        //    Uri fileUri = new Uri(filePath);
+        //    //MessageBox.Show(filePath);
+        //    BitmapImage bitmapSource = new BitmapImage();
 
-            bitmapSource.BeginInit();
-            bitmapSource.CacheOption = BitmapCacheOption.None;
-            bitmapSource.UriSource = fileUri;
-            bitmapSource.EndInit();
+        //    bitmapSource.BeginInit();
+        //    bitmapSource.CacheOption = BitmapCacheOption.None;
+        //    bitmapSource.UriSource = fileUri;
+        //    bitmapSource.EndInit();
 
-            FacePhoto.Source = bitmapSource;
+        //    FacePhoto.Source = bitmapSource;
 
-            // Detect any faces in the image.
-            Title = "Detecting...";
-            faces = await UploadAndDetectFaces(filePath);
-            Title = String.Format("Detection Finished. {0} face(s) detected", faces.Length);
+        //    // Detect any faces in the image.
+        //    Title = "Detecting...";
+        //    faces = await UploadAndDetectFaces(filePath);
+        //    Title = String.Format("Detection Finished. {0} face(s) detected", faces.Length);
 
-            if (faces.Length > 0)
-            {
-                // Prepare to draw rectangles around the faces.
-                DrawingVisual visual = new DrawingVisual();
-                DrawingContext drawingContext = visual.RenderOpen();
-                drawingContext.DrawImage(bitmapSource,
-                    new Rect(0, 0, bitmapSource.Width, bitmapSource.Height));
-                double dpi = bitmapSource.DpiX;
-                resizeFactor = 96 / dpi;
-                faceDescriptions = new String[faces.Length];
-                double max_area = -1;
-                for (int i = 0; i < faces.Length; ++i) //find the closest face
-                {
-                    Face compare_face = faces[i];
-                    if (compare_face.FaceRectangle.Width * compare_face.FaceRectangle.Height > max_area)
-                    {
-                        max_area = compare_face.FaceRectangle.Width * compare_face.FaceRectangle.Height;
-                        max_index = i;
-                    }
-                }
+        //    if (faces.Length > 0)
+        //    {
+        //        // Prepare to draw rectangles around the faces.
+        //        DrawingVisual visual = new DrawingVisual();
+        //        DrawingContext drawingContext = visual.RenderOpen();
+        //        drawingContext.DrawImage(bitmapSource,
+        //            new Rect(0, 0, bitmapSource.Width, bitmapSource.Height));
+        //        double dpi = bitmapSource.DpiX;
+        //        resizeFactor = 96 / dpi;
+        //        faceDescriptions = new String[faces.Length];
+        //        double max_area = -1;
+        //        for (int i = 0; i < faces.Length; ++i) //find the closest face
+        //        {
+        //            Face compare_face = faces[i];
+        //            if (compare_face.FaceRectangle.Width * compare_face.FaceRectangle.Height > max_area)
+        //            {
+        //                max_area = compare_face.FaceRectangle.Width * compare_face.FaceRectangle.Height;
+        //                max_index = i;
+        //            }
+        //        }
 
-                Face face = faces[max_index];
-                MessageBox.Show(face.FaceLandmarks.EyeRightTop.X.ToString());
-                // Draw a rectangle on the face.
-                drawingContext.DrawRectangle(
-                    Brushes.Transparent,
-                    new Pen(Brushes.Red, 2),
-                    new Rect(
-                        face.FaceRectangle.Left * resizeFactor,
-                        face.FaceRectangle.Top * resizeFactor,
-                        face.FaceRectangle.Width * resizeFactor,
-                        face.FaceRectangle.Height * resizeFactor
-                        )
-                        );
-                //draw a line for the coordinates
-                drawingContext.DrawLine(
-                    new Pen(Brushes.Red, 2),
-                    new Point(face.FaceLandmarks.EyeRightTop.X * resizeFactor, face.FaceLandmarks.EyeRightTop.Y * resizeFactor),
-                    new Point(face.FaceLandmarks.EyeRightBottom.X * resizeFactor, face.FaceLandmarks.EyeRightBottom.Y * resizeFactor)
-                );
-                drawingContext.DrawLine(
-                    new Pen(Brushes.Red, 2),
-                    new Point(face.FaceLandmarks.EyeLeftTop.X * resizeFactor, face.FaceLandmarks.EyeLeftTop.Y * resizeFactor),
-                    new Point(face.FaceLandmarks.EyeLeftBottom.X * resizeFactor, face.FaceLandmarks.EyeLeftBottom.Y * resizeFactor)
-                    );
-                drawingContext.DrawLine(
-                    new Pen(Brushes.Red, 2),
-                    new Point(face.FaceLandmarks.UpperLipBottom.X * resizeFactor, face.FaceLandmarks.UpperLipBottom.Y * resizeFactor),
-                    new Point(face.FaceLandmarks.UnderLipTop.X * resizeFactor, face.FaceLandmarks.UnderLipTop.Y * resizeFactor)
-                    );
-                // Store the face description.
-                faceDescriptions[max_index] = ("Eye Openning Ratio: " + Eye_openning_ratio(face).ToString()
-                    //   + "   , Average eye distance: " + average_eyelid_distance(face)
-                    //   + "   , right eye distance: " + Right_eyelid_distance(face)
-                    //   + "   , left eye distance: " + Left_eyelid_distance(face)
-                    //   + "   , real constant distance: " + Real_constant_distance(face)
-                    + "   , yawn raio: " + yawn_ratio(face)
-                    + "   , frustration: " + frustration(face)
-                    + "   , average: " + average_ratio_tiredness
-                    //  + "   , pitch 'value': " + Math.Abs(face.FaceAttributes.HeadPose.Pitch).ToString()//can't use pitch as currently unsupported
-                    ); //changed this from FaceDescription to eye function
+        //        Face face = faces[max_index];
+        //        MessageBox.Show(face.FaceLandmarks.EyeRightTop.X.ToString());
+        //        // Draw a rectangle on the face.
+        //        drawingContext.DrawRectangle(
+        //            Brushes.Transparent,
+        //            new Pen(Brushes.Red, 2),
+        //            new Rect(
+        //                face.FaceRectangle.Left * resizeFactor,
+        //                face.FaceRectangle.Top * resizeFactor,
+        //                face.FaceRectangle.Width * resizeFactor,
+        //                face.FaceRectangle.Height * resizeFactor
+        //                )
+        //                );
+        //        //draw a line for the coordinates
+        //        drawingContext.DrawLine(
+        //            new Pen(Brushes.Red, 2),
+        //            new Point(face.FaceLandmarks.EyeRightTop.X * resizeFactor, face.FaceLandmarks.EyeRightTop.Y * resizeFactor),
+        //            new Point(face.FaceLandmarks.EyeRightBottom.X * resizeFactor, face.FaceLandmarks.EyeRightBottom.Y * resizeFactor)
+        //        );
+        //        drawingContext.DrawLine(
+        //            new Pen(Brushes.Red, 2),
+        //            new Point(face.FaceLandmarks.EyeLeftTop.X * resizeFactor, face.FaceLandmarks.EyeLeftTop.Y * resizeFactor),
+        //            new Point(face.FaceLandmarks.EyeLeftBottom.X * resizeFactor, face.FaceLandmarks.EyeLeftBottom.Y * resizeFactor)
+        //            );
+        //        drawingContext.DrawLine(
+        //            new Pen(Brushes.Red, 2),
+        //            new Point(face.FaceLandmarks.UpperLipBottom.X * resizeFactor, face.FaceLandmarks.UpperLipBottom.Y * resizeFactor),
+        //            new Point(face.FaceLandmarks.UnderLipTop.X * resizeFactor, face.FaceLandmarks.UnderLipTop.Y * resizeFactor)
+        //            );
+        //        // Store the face description.
+        //        faceDescriptions[max_index] = ("Eye Openning Ratio: " + Eye_openning_ratio(face).ToString()
+        //            //   + "   , Average eye distance: " + average_eyelid_distance(face)
+        //            //   + "   , right eye distance: " + Right_eyelid_distance(face)
+        //            //   + "   , left eye distance: " + Left_eyelid_distance(face)
+        //            //   + "   , real constant distance: " + Real_constant_distance(face)
+        //            + "   , yawn raio: " + yawn_ratio(face)
+        //            + "   , frustration: " + frustration(face)
+        //            + "   , average: " + average_ratio_tiredness
+        //            //  + "   , pitch 'value': " + Math.Abs(face.FaceAttributes.HeadPose.Pitch).ToString()//can't use pitch as currently unsupported
+        //            ); //changed this from FaceDescription to eye function
 
-                string message = "The current eye openning ratio: " + Eye_openning_ratio(faces[max_index]).ToString();
-                message += "\nThe current lip open ratio is: " + yawn_ratio(faces[max_index]);//Should somehow have a large weighting on the yawn (maybe exponential)
-                //message += "\nThe current pitch 'value' is: " + Math.Abs(faces[max_index].FaceAttributes.HeadPose.Pitch); //can't use pitch as currently unsupported
-                MessageBox.Show(message);
-                drawingContext.Close();
+        //        string message = "The current eye openning ratio: " + Eye_openning_ratio(faces[max_index]).ToString();
+        //        message += "\nThe current lip open ratio is: " + yawn_ratio(faces[max_index]);//Should somehow have a large weighting on the yawn (maybe exponential)
+        //        //message += "\nThe current pitch 'value' is: " + Math.Abs(faces[max_index].FaceAttributes.HeadPose.Pitch); //can't use pitch as currently unsupported
+        //        MessageBox.Show(message);
+        //        drawingContext.Close();
 
-                // Display the image with the rectangle around the face.
-                RenderTargetBitmap faceWithRectBitmap = new RenderTargetBitmap(
-                    (int)(bitmapSource.PixelWidth * resizeFactor),
-                    (int)(bitmapSource.PixelHeight * resizeFactor),
-                    96,
-                    96,
-                    PixelFormats.Pbgra32);
+        //        // Display the image with the rectangle around the face.
+        //        RenderTargetBitmap faceWithRectBitmap = new RenderTargetBitmap(
+        //            (int)(bitmapSource.PixelWidth * resizeFactor),
+        //            (int)(bitmapSource.PixelHeight * resizeFactor),
+        //            96,
+        //            96,
+        //            PixelFormats.Pbgra32);
 
-                faceWithRectBitmap.Render(visual);
-                FacePhoto.Source = faceWithRectBitmap;
+        //        faceWithRectBitmap.Render(visual);
+        //        FacePhoto.Source = faceWithRectBitmap;
 
-                // Set the status bar text.
-                faceDescriptionStatusBar.Text = "Place the mouse pointer over a face to see the face description.";
-            }
-        }
+        //        // Set the status bar text.
+        //        faceDescriptionStatusBar.Text = "Place the mouse pointer over a face to see the face description.";
+        //    }
+        //}
         // Uploads the image file and calls Detect Faces.
 
         private async Task<Face[]> UploadAndDetectFaces(string imageFilePath)
@@ -470,44 +528,44 @@ namespace FaceTutorial
 
         // Displays the face description when the mouse is over a face rectangle.
 
-        private void FacePhoto_MouseMove(object sender, MouseEventArgs e)
-        {
-            // If the REST call has not completed, return from this method.
-            if (faces == null)
-                return;
+        //private void FacePhoto_MouseMove(object sender, MouseEventArgs e)
+        //{
+        //    // If the REST call has not completed, return from this method.
+        //    if (faces == null)
+        //        return;
 
-            // Find the mouse position relative to the image.
-            Point mouseXY = e.GetPosition(FacePhoto);
+        //    // Find the mouse position relative to the image.
+        //    Point mouseXY = e.GetPosition(FacePhoto);
 
-            ImageSource imageSource = FacePhoto.Source;
-            BitmapSource bitmapSource = (BitmapSource)imageSource;
+        //    ImageSource imageSource = FacePhoto.Source;
+        //    BitmapSource bitmapSource = (BitmapSource)imageSource;
 
-            // Scale adjustment between the actual size and displayed size.
-            var scale = FacePhoto.ActualWidth / (bitmapSource.PixelWidth / resizeFactor);
+        //    // Scale adjustment between the actual size and displayed size.
+        //    var scale = FacePhoto.ActualWidth / (bitmapSource.PixelWidth / resizeFactor);
 
-            // Check if this mouse position is over a face rectangle.
-            bool mouseOverFace = false;
+        //    // Check if this mouse position is over a face rectangle.
+        //    bool mouseOverFace = false;
 
-            for (int i = 0; i < faces.Length; ++i)
-            {
-                FaceRectangle fr = faces[i].FaceRectangle;
-                double left = fr.Left * scale;
-                double top = fr.Top * scale;
-                double width = fr.Width * scale;
-                double height = fr.Height * scale;
+        //    for (int i = 0; i < faces.Length; ++i)
+        //    {
+        //        FaceRectangle fr = faces[i].FaceRectangle;
+        //        double left = fr.Left * scale;
+        //        double top = fr.Top * scale;
+        //        double width = fr.Width * scale;
+        //        double height = fr.Height * scale;
 
-                // Display the face description for this face if the mouse is over this face rectangle.
-                if (mouseXY.X >= left && mouseXY.X <= left + width && mouseXY.Y >= top && mouseXY.Y <= top + height)
-                {
-                    faceDescriptionStatusBar.Text = faceDescriptions[i];
-                    mouseOverFace = true;
-                    break;
-                }
-            }
+        //        // Display the face description for this face if the mouse is over this face rectangle.
+        //        if (mouseXY.X >= left && mouseXY.X <= left + width && mouseXY.Y >= top && mouseXY.Y <= top + height)
+        //        {
+        //            faceDescriptionStatusBar.Text = faceDescriptions[i];
+        //            mouseOverFace = true;
+        //            break;
+        //        }
+        //    }
 
-            // If the mouse is not over a face rectangle.
-            if (!mouseOverFace)
-                faceDescriptionStatusBar.Text = "Place the mouse pointer over a face to see the face description.";
-        }
+        //    // If the mouse is not over a face rectangle.
+        //    if (!mouseOverFace)
+        //        faceDescriptionStatusBar.Text = "Place the mouse pointer over a face to see the face description.";
+        //}
     }
 }

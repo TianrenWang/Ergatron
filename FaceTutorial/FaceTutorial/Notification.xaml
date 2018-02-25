@@ -1,0 +1,20 @@
+﻿<Window x:Class="FaceTutorial.Notification"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:FaceTutorial"
+        mc:Ignorable="d" 
+        Title="ERGATRON" Height="100" Width="500" Icon="Icons/icons8-alarm-64.png">
+    <Window.Background>
+        <ImageBrush/>
+    </Window.Background>
+    <Grid>
+        <Grid.Background>
+            <ImageBrush ImageSource="Icons/abstract-background-with-a-watercolor-texture_1048-2144.jpg"/>
+        </Grid.Background>
+        <Label Name="notification" Content="Label" HorizontalAlignment="Left" Margin="57,10,0,0" VerticalAlignment="Top" Height="55" Width="419" FontWeight="Bold" FontSize="28" FontFamily="Bernard MT Condensed" Foreground="Black"/>
+        <Image HorizontalAlignment="Left" Height="46" Margin="10,14,0,0" VerticalAlignment="Top" Width="42" Source="Icons/icons8-high-priority-80.png" RenderTransformOrigin="0.025,0.447"/>
+
+    </Grid>
+</Window>

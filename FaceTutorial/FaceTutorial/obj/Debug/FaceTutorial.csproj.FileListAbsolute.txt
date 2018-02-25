@@ -92,11 +92,16 @@ C:\Users\johns\Desktop\Hack the Valley\Ergatron\FaceTutorial\FaceTutorial\bin\De
 C:\Users\johns\Desktop\Hack the Valley\Ergatron\FaceTutorial\FaceTutorial\bin\Debug\zh-tw\ZedGraph.resources.dll
 C:\Users\johns\Desktop\Hack the Valley\Ergatron\FaceTutorial\FaceTutorial\obj\Debug\FaceTutorial.csproj.App.config
 C:\Users\johns\Desktop\Hack the Valley\Ergatron\FaceTutorial\FaceTutorial\obj\Debug\FaceTutorial.csprojResolveAssemblyReference.cache
-C:\Users\johns\Desktop\Hack the Valley\Ergatron\FaceTutorial\FaceTutorial\obj\Debug\MainWindow.baml
 C:\Users\johns\Desktop\Hack the Valley\Ergatron\FaceTutorial\FaceTutorial\obj\Debug\MainWindow.g.cs
+C:\Users\johns\Desktop\Hack the Valley\Ergatron\FaceTutorial\FaceTutorial\obj\Debug\Notification.g.cs
+C:\Users\johns\Desktop\Hack the Valley\Ergatron\FaceTutorial\FaceTutorial\obj\Debug\Window1.g.cs
 C:\Users\johns\Desktop\Hack the Valley\Ergatron\FaceTutorial\FaceTutorial\obj\Debug\App.g.cs
 C:\Users\johns\Desktop\Hack the Valley\Ergatron\FaceTutorial\FaceTutorial\obj\Debug\FaceTutorial_Content.g.cs
 C:\Users\johns\Desktop\Hack the Valley\Ergatron\FaceTutorial\FaceTutorial\obj\Debug\FaceTutorial_MarkupCompile.cache
+C:\Users\johns\Desktop\Hack the Valley\Ergatron\FaceTutorial\FaceTutorial\obj\Debug\FaceTutorial_MarkupCompile.lref
+C:\Users\johns\Desktop\Hack the Valley\Ergatron\FaceTutorial\FaceTutorial\obj\Debug\MainWindow.baml
+C:\Users\johns\Desktop\Hack the Valley\Ergatron\FaceTutorial\FaceTutorial\obj\Debug\Notification.baml
+C:\Users\johns\Desktop\Hack the Valley\Ergatron\FaceTutorial\FaceTutorial\obj\Debug\Window1.baml
 C:\Users\johns\Desktop\Hack the Valley\Ergatron\FaceTutorial\FaceTutorial\obj\Debug\FaceTutorial.g.resources
 C:\Users\johns\Desktop\Hack the Valley\Ergatron\FaceTutorial\FaceTutorial\obj\Debug\FaceTutorial.Properties.Resources.resources
 C:\Users\johns\Desktop\Hack the Valley\Ergatron\FaceTutorial\FaceTutorial\obj\Debug\FaceTutorial.csproj.GenerateResource.Cache
