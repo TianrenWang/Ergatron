@@ -17,24 +17,24 @@ using Emgu.CV;
 
 namespace FaceTutorial
 {
-	public partial class MainWindow : Window
-	{
-		// Replace the first parameter with your valid subscription key.
-		//
-		// Replace or verify the region in the second parameter.
-		//
-		// You must use the same region in your REST API call as you used to obtain your subscription keys.
-		// For example, if you obtained your subscription keys from the westus region, replace
-		// "westcentralus" in the URI below with "westus".
-		//
-		// NOTE: Free trial subscription keys are generated in the westcentralus region, so if you are using
-		// a free trial subscription key, you should not need to change this region.
-		private readonly IFaceServiceClient faceServiceClient =
-			new FaceServiceClient("7b81304ca843487aa03a7cee7685b83e", "https://westcentralus.api.cognitive.microsoft.com/face/v1.0");
+    public partial class MainWindow : Window
+    {
+        // Replace the first parameter with your valid subscription key.
+        //
+        // Replace or verify the region in the second parameter.
+        //
+        // You must use the same region in your REST API call as you used to obtain your subscription keys.
+        // For example, if you obtained your subscription keys from the westus region, replace
+        // "westcentralus" in the URI below with "westus".
+        //
+        // NOTE: Free trial subscription keys are generated in the westcentralus region, so if you are using
+        // a free trial subscription key, you should not need to change this region.
+        private readonly IFaceServiceClient faceServiceClient =
+            new FaceServiceClient("7b81304ca843487aa03a7cee7685b83e", "https://westcentralus.api.cognitive.microsoft.com/face/v1.0");
 
-		Face[] faces;                   // The list of detected faces.
-		String[] faceDescriptions;      // The list of descriptions for the detected faces.
-		double resizeFactor; 
+        Face[] faces;                   // The list of detected faces.
+        String[] faceDescriptions;      // The list of descriptions for the detected faces.
+        double resizeFactor;
         string startupPath = Directory.GetParent(Directory.GetCurrentDirectory()).Parent.FullName;
 
         // The resize factor for the displayed image.
@@ -46,7 +46,7 @@ namespace FaceTutorial
         }
         int max_index = 0; //maybe just change this to 0 for demo
         bool use_frustration = true, use_tiredness = true, too_close = false;
-        private void update_uses (bool frustration_on, bool tiredness_on) //user specifices which use to use
+        private void update_uses(bool frustration_on, bool tiredness_on) //user specifices which use to use
         {
             use_frustration = frustration_on; //specified value from user
             use_tiredness = tiredness_on;
@@ -57,7 +57,7 @@ namespace FaceTutorial
             System.Drawing.Bitmap image = capture.QueryFrame().Bitmap; //take a picture
             image.Save(startupPath + "\\ApplicationData\\picture.jpg");
         }
-        private async void Main ()
+        private async void Main()
         {
             Initialize_Queues();
             Stopwatch three_second_check = new Stopwatch();
@@ -75,8 +75,8 @@ namespace FaceTutorial
                 //update_uses(frstration_in, tiredness_in); //this needs to be the inputs from the front end side
                 string filePath = startupPath + "\\ApplicationData\\picture.jpg";
                 faces = await UploadAndDetectFaces(filePath);
-                
-                while ((faces == null)&&(three_second_check.ElapsedMilliseconds <= 3000))
+
+                while ((faces == null) && (three_second_check.ElapsedMilliseconds <= 3000))
                 { }
                 if ((faces == null) && (three_second_check.ElapsedMilliseconds >= 3000))
                 {
@@ -108,7 +108,7 @@ namespace FaceTutorial
                     continue;
                 }
                 //could do below with switch case instead
-                if (Sleep(faces[max_index],use_frustration,use_tiredness) == 0)
+                if (Sleep(faces[max_index], use_frustration, use_tiredness) == 0)
                 {
                     MessageBox.Show("Time to sleep, you are both tired and frustrated"); //this line should somehow tell the user to sleep (they are both)
                     break;
@@ -144,10 +144,10 @@ namespace FaceTutorial
                 frustration_queue.Enqueue(0);
             }
         }
-		private void input_frame (Face face, double size)
+        private void input_frame(Face face, double size)
         {
 
-            double ratio_sum = W1*Eye_openning_ratio(face) - W2*yawn_ratio(face);
+            double ratio_sum = W1 * Eye_openning_ratio(face) - W2 * yawn_ratio(face);
             //MessageBox.Show("Eye_openning_ratio: " + Eye_openning_ratio(face).ToString());
             //MessageBox.Show("\nYawn_Ratio: " + yawn_ratio(face).ToString());
             //MessageBox.Show("\nYawn_Ratio with multiplier: " + (W2 * yawn_ratio(face)).ToString());
@@ -176,20 +176,20 @@ namespace FaceTutorial
                 ratio_queue.Enqueue(ratio_sum);
                 //frustration_queue.Enqueue(frustration(face));
             }
-            
+
 
         }
 
-        private bool frustration (Face face)
+        private bool frustration(Face face)
         {
             double anger = 0, fear = 0;
-            anger = face.FaceAttributes.Emotion.Anger*100;
-            fear = face.FaceAttributes.Emotion.Fear*100;
+            anger = face.FaceAttributes.Emotion.Anger * 100;
+            fear = face.FaceAttributes.Emotion.Fear * 100;
             if (anger >= 10 || fear >= 10)
                 return true;
             return false;
         }
-        private int Sleep (Face face, bool use_frustration, bool use_tiredness)
+        private int Sleep(Face face, bool use_frustration, bool use_tiredness)
         { //-1 means no need to sleep, 0 means user is tired and frustrated
           // 1 means user is tired, 2 means user is frustrated
           //MessageBox.Show(average_ratio_tiredness.ToString());
@@ -206,51 +206,51 @@ namespace FaceTutorial
                 return 2; // means user is just frustrated
             return -1; //means user is all good
         }
-		// Displays the image and calls Detect Faces.
+        // Displays the image and calls Detect Faces.
 
-		private async void BrowseButton_Click(object sender, RoutedEventArgs e)
-		{
-			// Get the image file to scan from the user.
-			var openDlg = new Microsoft.Win32.OpenFileDialog();
+        private async void BrowseButton_Click(object sender, RoutedEventArgs e)
+        {
+            // Get the image file to scan from the user.
+            var openDlg = new Microsoft.Win32.OpenFileDialog();
 
-			openDlg.Filter = "JPEG Image(*.jpg)|*.jpg";
-			bool? result = openDlg.ShowDialog(this);
+            openDlg.Filter = "JPEG Image(*.jpg)|*.jpg";
+            bool? result = openDlg.ShowDialog(this);
 
-			// Return if canceled.
-			if (!(bool)result)
-			{
-				return;
-			}
+            // Return if canceled.
+            if (!(bool)result)
+            {
+                return;
+            }
 
             // Display the image file.
             //string filePath = openDlg.FileName;
             string filePath = "C:\\Users\\johns\\Desktop\\Hack the Valley\\merge_from_ofoct.jpg";
             Uri fileUri = new Uri(filePath);
             //MessageBox.Show(filePath);
-			BitmapImage bitmapSource = new BitmapImage();
+            BitmapImage bitmapSource = new BitmapImage();
 
-			bitmapSource.BeginInit();
-			bitmapSource.CacheOption = BitmapCacheOption.None;
-			bitmapSource.UriSource = fileUri;
-			bitmapSource.EndInit();
+            bitmapSource.BeginInit();
+            bitmapSource.CacheOption = BitmapCacheOption.None;
+            bitmapSource.UriSource = fileUri;
+            bitmapSource.EndInit();
 
-			FacePhoto.Source = bitmapSource;
+            FacePhoto.Source = bitmapSource;
 
-		    // Detect any faces in the image.
-		    Title = "Detecting...";
-		    faces = await UploadAndDetectFaces(filePath);
-		    Title = String.Format("Detection Finished. {0} face(s) detected", faces.Length);
+            // Detect any faces in the image.
+            Title = "Detecting...";
+            faces = await UploadAndDetectFaces(filePath);
+            Title = String.Format("Detection Finished. {0} face(s) detected", faces.Length);
 
-		    if (faces.Length > 0)
-		    {
-			    // Prepare to draw rectangles around the faces.
-			    DrawingVisual visual = new DrawingVisual();
-			    DrawingContext drawingContext = visual.RenderOpen();
-			    drawingContext.DrawImage(bitmapSource,
-				    new Rect(0, 0, bitmapSource.Width, bitmapSource.Height));
-			    double dpi = bitmapSource.DpiX;
-			    resizeFactor = 96 / dpi;
-			    faceDescriptions = new String[faces.Length];
+            if (faces.Length > 0)
+            {
+                // Prepare to draw rectangles around the faces.
+                DrawingVisual visual = new DrawingVisual();
+                DrawingContext drawingContext = visual.RenderOpen();
+                drawingContext.DrawImage(bitmapSource,
+                    new Rect(0, 0, bitmapSource.Width, bitmapSource.Height));
+                double dpi = bitmapSource.DpiX;
+                resizeFactor = 96 / dpi;
+                faceDescriptions = new String[faces.Length];
                 double max_area = -1;
                 for (int i = 0; i < faces.Length; ++i) //find the closest face
                 {
@@ -262,35 +262,35 @@ namespace FaceTutorial
                     }
                 }
 
-                    Face face = faces[max_index];
+                Face face = faces[max_index];
                 MessageBox.Show(face.FaceLandmarks.EyeRightTop.X.ToString());
-                    // Draw a rectangle on the face.
-                    drawingContext.DrawRectangle(
-                        Brushes.Transparent,
-                        new Pen(Brushes.Red, 2),
-                        new Rect(
-                            face.FaceRectangle.Left * resizeFactor,
-                            face.FaceRectangle.Top * resizeFactor,
-                            face.FaceRectangle.Width * resizeFactor,
-                            face.FaceRectangle.Height * resizeFactor
-                            )
-                            );
-                    //draw a line for the coordinates
-                    drawingContext.DrawLine(
-                        new Pen(Brushes.Red, 2),
-                        new Point(face.FaceLandmarks.EyeRightTop.X * resizeFactor, face.FaceLandmarks.EyeRightTop.Y * resizeFactor),
-                        new Point(face.FaceLandmarks.EyeRightBottom.X * resizeFactor, face.FaceLandmarks.EyeRightBottom.Y * resizeFactor)
+                // Draw a rectangle on the face.
+                drawingContext.DrawRectangle(
+                    Brushes.Transparent,
+                    new Pen(Brushes.Red, 2),
+                    new Rect(
+                        face.FaceRectangle.Left * resizeFactor,
+                        face.FaceRectangle.Top * resizeFactor,
+                        face.FaceRectangle.Width * resizeFactor,
+                        face.FaceRectangle.Height * resizeFactor
+                        )
+                        );
+                //draw a line for the coordinates
+                drawingContext.DrawLine(
+                    new Pen(Brushes.Red, 2),
+                    new Point(face.FaceLandmarks.EyeRightTop.X * resizeFactor, face.FaceLandmarks.EyeRightTop.Y * resizeFactor),
+                    new Point(face.FaceLandmarks.EyeRightBottom.X * resizeFactor, face.FaceLandmarks.EyeRightBottom.Y * resizeFactor)
+                );
+                drawingContext.DrawLine(
+                    new Pen(Brushes.Red, 2),
+                    new Point(face.FaceLandmarks.EyeLeftTop.X * resizeFactor, face.FaceLandmarks.EyeLeftTop.Y * resizeFactor),
+                    new Point(face.FaceLandmarks.EyeLeftBottom.X * resizeFactor, face.FaceLandmarks.EyeLeftBottom.Y * resizeFactor)
                     );
-                    drawingContext.DrawLine(
-                        new Pen(Brushes.Red, 2),
-                        new Point(face.FaceLandmarks.EyeLeftTop.X * resizeFactor, face.FaceLandmarks.EyeLeftTop.Y * resizeFactor),
-                        new Point(face.FaceLandmarks.EyeLeftBottom.X * resizeFactor, face.FaceLandmarks.EyeLeftBottom.Y * resizeFactor)
-                        );
-                    drawingContext.DrawLine(
-                        new Pen(Brushes.Red, 2),
-                        new Point(face.FaceLandmarks.UpperLipBottom.X * resizeFactor, face.FaceLandmarks.UpperLipBottom.Y * resizeFactor),
-                        new Point(face.FaceLandmarks.UnderLipTop.X * resizeFactor, face.FaceLandmarks.UnderLipTop.Y * resizeFactor)
-                        );
+                drawingContext.DrawLine(
+                    new Pen(Brushes.Red, 2),
+                    new Point(face.FaceLandmarks.UpperLipBottom.X * resizeFactor, face.FaceLandmarks.UpperLipBottom.Y * resizeFactor),
+                    new Point(face.FaceLandmarks.UnderLipTop.X * resizeFactor, face.FaceLandmarks.UnderLipTop.Y * resizeFactor)
+                    );
                 // Store the face description.
                 faceDescriptions[max_index] = ("Eye Openning Ratio: " + Eye_openning_ratio(face).ToString()
                     //   + "   , Average eye distance: " + average_eyelid_distance(face)
@@ -300,37 +300,37 @@ namespace FaceTutorial
                     + "   , yawn raio: " + yawn_ratio(face)
                     + "   , frustration: " + frustration(face)
                     + "   , average: " + average_ratio_tiredness
-                      //  + "   , pitch 'value': " + Math.Abs(face.FaceAttributes.HeadPose.Pitch).ToString()//can't use pitch as currently unsupported
+                    //  + "   , pitch 'value': " + Math.Abs(face.FaceAttributes.HeadPose.Pitch).ToString()//can't use pitch as currently unsupported
                     ); //changed this from FaceDescription to eye function
-                
+
                 string message = "The current eye openning ratio: " + Eye_openning_ratio(faces[max_index]).ToString();
                 message += "\nThe current lip open ratio is: " + yawn_ratio(faces[max_index]);//Should somehow have a large weighting on the yawn (maybe exponential)
                 //message += "\nThe current pitch 'value' is: " + Math.Abs(faces[max_index].FaceAttributes.HeadPose.Pitch); //can't use pitch as currently unsupported
                 MessageBox.Show(message);
-			    drawingContext.Close();
+                drawingContext.Close();
 
-			    // Display the image with the rectangle around the face.
-			    RenderTargetBitmap faceWithRectBitmap = new RenderTargetBitmap(
-				    (int)(bitmapSource.PixelWidth * resizeFactor),
-				    (int)(bitmapSource.PixelHeight * resizeFactor),
-				    96,
-				    96,
-				    PixelFormats.Pbgra32);
-                
-			    faceWithRectBitmap.Render(visual);
-			    FacePhoto.Source = faceWithRectBitmap;
-                
-			    // Set the status bar text.
-			    faceDescriptionStatusBar.Text = "Place the mouse pointer over a face to see the face description.";
-		    }
-	    }
+                // Display the image with the rectangle around the face.
+                RenderTargetBitmap faceWithRectBitmap = new RenderTargetBitmap(
+                    (int)(bitmapSource.PixelWidth * resizeFactor),
+                    (int)(bitmapSource.PixelHeight * resizeFactor),
+                    96,
+                    96,
+                    PixelFormats.Pbgra32);
+
+                faceWithRectBitmap.Render(visual);
+                FacePhoto.Source = faceWithRectBitmap;
+
+                // Set the status bar text.
+                faceDescriptionStatusBar.Text = "Place the mouse pointer over a face to see the face description.";
+            }
+        }
         // Uploads the image file and calls Detect Faces.
 
         private async Task<Face[]> UploadAndDetectFaces(string imageFilePath)
         {
             // The list of Face attributes to return.
             IEnumerable<FaceAttributeType> faceAttributes =
-                new FaceAttributeType[] { FaceAttributeType.Smile, FaceAttributeType.Emotion};
+                new FaceAttributeType[] { FaceAttributeType.Smile, FaceAttributeType.Emotion };
 
             // Call the Face API.
             try
@@ -362,7 +362,7 @@ namespace FaceTutorial
         }
         private double Left_eyelid_distance(Face face)
         {
-            return Math.Sqrt(Math.Pow(face.FaceLandmarks.EyeLeftTop.Y - face.FaceLandmarks.EyeLeftBottom.Y, 2) 
+            return Math.Sqrt(Math.Pow(face.FaceLandmarks.EyeLeftTop.Y - face.FaceLandmarks.EyeLeftBottom.Y, 2)
                     + Math.Pow(face.FaceLandmarks.EyeLeftTop.X - face.FaceLandmarks.EyeLeftBottom.X, 2));
         }
 
@@ -390,9 +390,9 @@ namespace FaceTutorial
                     + Math.Pow(face.FaceLandmarks.EyeLeftOuter.X - face.FaceLandmarks.EyeLeftInner.X, 2));
             distance_eyelid_horizontal_average /= 2;
             */
-            return (distance_nose_average + distance_eyebrow_average)/2.0;
+            return (distance_nose_average + distance_eyebrow_average) / 2.0;
         }
-        private double average_eyelid_distance (Face face)
+        private double average_eyelid_distance(Face face)
         {
             return (Right_eyelid_distance(face) + Left_eyelid_distance(face)) / 2.0;
         }
@@ -406,7 +406,7 @@ namespace FaceTutorial
 
         //below returns the ratio of how open the mouth is only using under lip (for now)
 
-        private double yawn_ratio (Face face)
+        private double yawn_ratio(Face face)
         {
             double distance_between_lips = 0, ratio = 0;
             distance_between_lips = Math.Sqrt(Math.Pow(face.FaceLandmarks.UpperLipBottom.Y - face.FaceLandmarks.UnderLipTop.Y, 2)
@@ -418,96 +418,96 @@ namespace FaceTutorial
         // Returns a string that describes the given face
 
         private string FaceDescription(Face face)
-	    {
-		    StringBuilder sb = new StringBuilder();
+        {
+            StringBuilder sb = new StringBuilder();
 
-		    sb.Append("Face: ");
+            sb.Append("Face: ");
 
-		    // Add the gender, age, and smile.
-		    sb.Append(face.FaceAttributes.Gender);
-		    sb.Append(", ");
-		    sb.Append(face.FaceAttributes.Age);
-		    sb.Append(", ");
-		    sb.Append(String.Format("smile {0:F1}%, ", face.FaceAttributes.Smile * 100));
+            // Add the gender, age, and smile.
+            sb.Append(face.FaceAttributes.Gender);
+            sb.Append(", ");
+            sb.Append(face.FaceAttributes.Age);
+            sb.Append(", ");
+            sb.Append(String.Format("smile {0:F1}%, ", face.FaceAttributes.Smile * 100));
 
-		    // Add the emotions. Display all emotions over 10%.
-		    sb.Append("Emotion: ");
-		    EmotionScores emotionScores = face.FaceAttributes.Emotion;
-		    if (emotionScores.Anger >= 0.1f) sb.Append(String.Format("anger {0:F1}%, ", emotionScores.Anger * 100));
-		    if (emotionScores.Contempt >= 0.1f) sb.Append(String.Format("contempt {0:F1}%, ", emotionScores.Contempt * 100));
-		    if (emotionScores.Disgust >= 0.1f) sb.Append(String.Format("disgust {0:F1}%, ", emotionScores.Disgust * 100));
-		    if (emotionScores.Fear >= 0.1f) sb.Append(String.Format("fear {0:F1}%, ", emotionScores.Fear * 100));
-		    if (emotionScores.Happiness >= 0.1f) sb.Append(String.Format("happiness {0:F1}%, ", emotionScores.Happiness * 100));
-		    if (emotionScores.Neutral >= 0.1f) sb.Append(String.Format("neutral {0:F1}%, ", emotionScores.Neutral * 100));
-		    if (emotionScores.Sadness >= 0.1f) sb.Append(String.Format("sadness {0:F1}%, ", emotionScores.Sadness * 100));
-		    if (emotionScores.Surprise >= 0.1f) sb.Append(String.Format("surprise {0:F1}%, ", emotionScores.Surprise * 100));
+            // Add the emotions. Display all emotions over 10%.
+            sb.Append("Emotion: ");
+            EmotionScores emotionScores = face.FaceAttributes.Emotion;
+            if (emotionScores.Anger >= 0.1f) sb.Append(String.Format("anger {0:F1}%, ", emotionScores.Anger * 100));
+            if (emotionScores.Contempt >= 0.1f) sb.Append(String.Format("contempt {0:F1}%, ", emotionScores.Contempt * 100));
+            if (emotionScores.Disgust >= 0.1f) sb.Append(String.Format("disgust {0:F1}%, ", emotionScores.Disgust * 100));
+            if (emotionScores.Fear >= 0.1f) sb.Append(String.Format("fear {0:F1}%, ", emotionScores.Fear * 100));
+            if (emotionScores.Happiness >= 0.1f) sb.Append(String.Format("happiness {0:F1}%, ", emotionScores.Happiness * 100));
+            if (emotionScores.Neutral >= 0.1f) sb.Append(String.Format("neutral {0:F1}%, ", emotionScores.Neutral * 100));
+            if (emotionScores.Sadness >= 0.1f) sb.Append(String.Format("sadness {0:F1}%, ", emotionScores.Sadness * 100));
+            if (emotionScores.Surprise >= 0.1f) sb.Append(String.Format("surprise {0:F1}%, ", emotionScores.Surprise * 100));
 
-		    // Add glasses.
-		    sb.Append(face.FaceAttributes.Glasses);
-		    sb.Append(", ");
+            // Add glasses.
+            sb.Append(face.FaceAttributes.Glasses);
+            sb.Append(", ");
 
-		    // Add hair.
-		    sb.Append("Hair: ");
+            // Add hair.
+            sb.Append("Hair: ");
 
-		    // Display baldness confidence if over 1%.
-		    if (face.FaceAttributes.Hair.Bald >= 0.01f)
-			    sb.Append(String.Format("bald {0:F1}% ", face.FaceAttributes.Hair.Bald * 100));
+            // Display baldness confidence if over 1%.
+            if (face.FaceAttributes.Hair.Bald >= 0.01f)
+                sb.Append(String.Format("bald {0:F1}% ", face.FaceAttributes.Hair.Bald * 100));
 
-		    // Display all hair color attributes over 10%.
-		    HairColor[] hairColors = face.FaceAttributes.Hair.HairColor;
-		    foreach (HairColor hairColor in hairColors)
-		    {
-			    if (hairColor.Confidence >= 0.1f)
-			    {
-				    sb.Append(hairColor.Color.ToString());
-				    sb.Append(String.Format(" {0:F1}% ", hairColor.Confidence * 100));
-			    }
-		    }
+            // Display all hair color attributes over 10%.
+            HairColor[] hairColors = face.FaceAttributes.Hair.HairColor;
+            foreach (HairColor hairColor in hairColors)
+            {
+                if (hairColor.Confidence >= 0.1f)
+                {
+                    sb.Append(hairColor.Color.ToString());
+                    sb.Append(String.Format(" {0:F1}% ", hairColor.Confidence * 100));
+                }
+            }
 
-		    // Return the built string.
-		    return sb.ToString();
-	    }
+            // Return the built string.
+            return sb.ToString();
+        }
 
-	    // Displays the face description when the mouse is over a face rectangle.
+        // Displays the face description when the mouse is over a face rectangle.
 
-	    private void FacePhoto_MouseMove(object sender, MouseEventArgs e)
-	    {
-		    // If the REST call has not completed, return from this method.
-		    if (faces == null)
-			    return;
+        private void FacePhoto_MouseMove(object sender, MouseEventArgs e)
+        {
+            // If the REST call has not completed, return from this method.
+            if (faces == null)
+                return;
 
-		    // Find the mouse position relative to the image.
-		    Point mouseXY = e.GetPosition(FacePhoto);
+            // Find the mouse position relative to the image.
+            Point mouseXY = e.GetPosition(FacePhoto);
 
-		    ImageSource imageSource = FacePhoto.Source;
-		    BitmapSource bitmapSource = (BitmapSource)imageSource;
+            ImageSource imageSource = FacePhoto.Source;
+            BitmapSource bitmapSource = (BitmapSource)imageSource;
 
-		    // Scale adjustment between the actual size and displayed size.
-		    var scale = FacePhoto.ActualWidth / (bitmapSource.PixelWidth / resizeFactor);
+            // Scale adjustment between the actual size and displayed size.
+            var scale = FacePhoto.ActualWidth / (bitmapSource.PixelWidth / resizeFactor);
 
-		    // Check if this mouse position is over a face rectangle.
-		    bool mouseOverFace = false;
+            // Check if this mouse position is over a face rectangle.
+            bool mouseOverFace = false;
 
-		    for (int i = 0; i < faces.Length; ++i)
-		    {
-			    FaceRectangle fr = faces[i].FaceRectangle;
-			    double left = fr.Left * scale;
-			    double top = fr.Top * scale;
-			    double width = fr.Width * scale;
-			    double height = fr.Height * scale;
+            for (int i = 0; i < faces.Length; ++i)
+            {
+                FaceRectangle fr = faces[i].FaceRectangle;
+                double left = fr.Left * scale;
+                double top = fr.Top * scale;
+                double width = fr.Width * scale;
+                double height = fr.Height * scale;
 
-			    // Display the face description for this face if the mouse is over this face rectangle.
-			    if (mouseXY.X >= left && mouseXY.X <= left + width && mouseXY.Y >= top && mouseXY.Y <= top + height)
-			    {
-				    faceDescriptionStatusBar.Text = faceDescriptions[i];
-				    mouseOverFace = true;
-				    break;
-			    }
-		    }
+                // Display the face description for this face if the mouse is over this face rectangle.
+                if (mouseXY.X >= left && mouseXY.X <= left + width && mouseXY.Y >= top && mouseXY.Y <= top + height)
+                {
+                    faceDescriptionStatusBar.Text = faceDescriptions[i];
+                    mouseOverFace = true;
+                    break;
+                }
+            }
 
-		    // If the mouse is not over a face rectangle.
-		    if (!mouseOverFace)
-			    faceDescriptionStatusBar.Text = "Place the mouse pointer over a face to see the face description.";
-	    }
-	}
+            // If the mouse is not over a face rectangle.
+            if (!mouseOverFace)
+                faceDescriptionStatusBar.Text = "Place the mouse pointer over a face to see the face description.";
+        }
+    }
 }
